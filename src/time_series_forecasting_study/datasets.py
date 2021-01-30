@@ -7,7 +7,89 @@ import pandas as pd
 from . import utils
 
 
-_URL_BEIJING_PM25 = "https://archive.ics.uci.edu/ml/machine-learning-databases/00381/PRSA_data_2010.1.1-2014.12.31.csv"  # noqa
+URL_MLO_CO2 = "https://scrippsco2.ucsd.edu/assets/data/atmospheric/stations/in_situ_co2/daily/daily_in_situ_co2_mlo.csv"  # noqa
+URL_BEIJING_PM25 = "https://archive.ics.uci.edu/ml/machine-learning-databases/00381/PRSA_data_2010.1.1-2014.12.31.csv"  # noqa
+
+
+def _load_csv_dataset(
+    *,
+    data_dir: str | pathlib.Path,
+    fname: str,
+    url: str,
+    force: bool = False,
+    **read_csv_from_url_kwargs,
+) -> pd.DataFrame:
+    fpath = utils.to_path(data_dir).joinpath(fname)
+    if not fpath.exists() or force is True:
+        data = pd.read_csv(url, **read_csv_from_url_kwargs)
+        data.to_csv(fpath, header=True, index=False)
+    else:
+        data = pd.read_csv(fpath)
+    data = data.convert_dtypes()
+    return data
+
+
+def load_mlo_co2(
+    data_dir: str | pathlib.Path,
+    force: bool = False,
+) -> pd.DataFrame:
+    """
+    Args:
+        data_dir
+        force
+
+    Returns:
+        "Raw" Mauna Loa Observatory in-situ CO2 dataset.
+
+    Reference:
+        https://scrippsco2.ucsd.edu/data/atmospheric_co2/mlo.html
+    """
+    return _load_csv_dataset(
+        data_dir=data_dir,
+        fname=utils.get_fname_from_url(URL_MLO_CO2),
+        url=URL_MLO_CO2,
+        force=force,
+        skiprows=33,
+    )
+
+
+def munge_mlo_co2(
+    data: pd.DataFrame,
+    *,
+    freq: str = "1D",
+    fill: str = "interpolate",  # Literal["forward", "interpolate"]
+) -> pd.DataFrame:
+    """
+    Args:
+        data: As loaded from :func:`load_mlo_co2()`.
+
+    Returns:
+        Munged Mauna Loa Observatory in-situ CO2 dataset.
+    """
+    # some of the columns have extra chars, so strip em
+    data.columns = data.columns.str.strip(" %")
+    # build a combined datetime column, and fix the CO2 column so it reads as numeric
+    data.loc[:, "dt"] = pd.to_datetime(
+        data[["Yr", "Mn", "Dy"]].rename(
+            columns={"Yr": "year", "Mn": "month", "Dy": "day"}
+        )
+    )
+    data.loc[:, "CO2"] = pd.to_numeric(data["CO2"].str.strip().replace("NaN", pd.NA))
+    # drop unnecessary cols and set dt as index
+    data = data.drop(columns=["Yr", "Mn", "Dy", "NB", "scale"])
+    data = data.set_index("dt")
+    data = data.convert_dtypes()
+    # resample and fill missing values
+    data = data.resample(freq, axis="index").mean()
+    if fill == "forward":
+        data = data.fillna(method="ffill", limit=None)
+    elif fill == "interpolate":
+        data = data.interpolate(method="time", limit=None)
+    else:
+        raise ValueError()
+    # drop any rows from start/end for which key value wasn't filled
+    data = data.dropna(axis="index", how="any", subset=["CO2"])
+    return data
 
 
 def load_beijing_pm25(
@@ -21,21 +103,22 @@ def load_beijing_pm25(
 
     Returns:
         "Raw" Beijing PM2.5 dataset.
+
+    Reference:
+        https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data
     """
-    fpath = utils.to_path(data_dir).joinpath("PRSA_data_2010.1.1-2014.12.31.csv")
-    if not fpath.exists() or force is True:
-        data = pd.read_csv(_URL_BEIJING_PM25)
-        data.to_csv(fpath, header=True, index=False)
-    else:
-        data = pd.read_csv(fpath)
-    data = data.convert_dtypes()
-    return data
+    return _load_csv_dataset(
+        data_dir=data_dir,
+        fname=utils.get_fname_from_url(URL_BEIJING_PM25),
+        url=URL_BEIJING_PM25,
+        force=force,
+    )
 
 
 def munge_beijing_pm25(
     data: pd.DataFrame,
     freq: str = "1D",
-    fill_method: str = "ffill",
+    fill: str = "ffill",
 ) -> pd.DataFrame:
     """
     Args:
@@ -44,12 +127,15 @@ def munge_beijing_pm25(
     Returns:
         Munged Beijing PM2.5 dataset.
     """
+    # build a combined datetime column
     data.loc[:, "dt"] = pd.to_datetime(
         data[["year", "month", "day", "hour"]],
         format="%Y %m %d %H",
     )
+    # drop unnecessary cols and set dt as index
     data = data.drop(columns=["No", "year", "month", "day", "hour"])
     data = data.set_index("dt")
+    # rename columns, for clarity
     data = data.rename(
         columns={
             "DEWP": "dew_point",
@@ -61,8 +147,7 @@ def munge_beijing_pm25(
             "Ir": "hrs_rain",
         }
     )
-    # we have to handle wind_dir specially, so this won't cut it
-    # data = data.resample("1D", axis="index").mean()
+    # resample and fill missing values, with special handling for categorical wind_dir
     data = (
         data
         .resample(freq, axis="index")
@@ -79,14 +164,14 @@ def munge_beijing_pm25(
             }
         )
     )
-    # pandas makes us re-cast this column to string for some reason
-    data = data.astype({"wind_dir": "string"})
-    if fill_method == "ffill":
+    data = data.convert_dtypes()
+    data = data.astype({"wind_dir": "category"})
+    if fill == "forward":
         data = data.fillna(method="ffill", limit=None)
-    elif fill_method == "interpolate":
+    elif fill == "interpolate":
         data = data.interpolate(method="time", limit=None)
     else:
         raise ValueError()
-    # data = data.iloc[1:, :]
+    # drop any rows from start/end for which key value wasn't filled
     data = data.dropna(axis="index", how="any", subset=["pm2.5"])
     return data
