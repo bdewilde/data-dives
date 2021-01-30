@@ -25,7 +25,6 @@ def _load_csv_dataset(
         data.to_csv(fpath, header=True, index=False)
     else:
         data = pd.read_csv(fpath)
-    data = data.convert_dtypes()
     return data
 
 
@@ -67,18 +66,19 @@ def munge_mlo_co2(
         Munged Mauna Loa Observatory in-situ CO2 dataset.
     """
     # some of the columns have extra chars, so strip em
-    data.columns = data.columns.str.strip(" %")
+    data = data.rename(columns=lambda x: x.strip("% "))
     # build a combined datetime column, and fix the CO2 column so it reads as numeric
-    data.loc[:, "dt"] = pd.to_datetime(
-        data[["Yr", "Mn", "Dy"]].rename(
-            columns={"Yr": "year", "Mn": "month", "Dy": "day"}
-        )
+    data = data.assign(
+        dt=pd.to_datetime(
+            data[["Yr", "Mn", "Dy"]].rename(
+                columns={"Yr": "year", "Mn": "month", "Dy": "day"}
+            )
+        ),
+        CO2=pd.to_numeric(data["CO2"].str.strip().replace("NaN", pd.NA))
     )
-    data.loc[:, "CO2"] = pd.to_numeric(data["CO2"].str.strip().replace("NaN", pd.NA))
     # drop unnecessary cols and set dt as index
     data = data.drop(columns=["Yr", "Mn", "Dy", "NB", "scale"])
     data = data.set_index("dt")
-    data = data.convert_dtypes()
     # resample and fill missing values
     data = data.resample(freq, axis="index").mean()
     if fill == "forward":
@@ -87,6 +87,9 @@ def munge_mlo_co2(
         data = data.interpolate(method="time", limit=None)
     else:
         raise ValueError()
+    # convert dtypes here at the end since .interpolate(method="time") doesn't work
+    # for pandas' fancy new dtypes Int64 and Float64 (at least as of v1.1)
+    data = data.convert_dtypes()
     # drop any rows from start/end for which key value wasn't filled
     data = data.dropna(axis="index", how="any", subset=["CO2"])
     return data
@@ -128,9 +131,11 @@ def munge_beijing_pm25(
         Munged Beijing PM2.5 dataset.
     """
     # build a combined datetime column
-    data.loc[:, "dt"] = pd.to_datetime(
-        data[["year", "month", "day", "hour"]],
-        format="%Y %m %d %H",
+    data = data.assign(
+        dt=pd.to_datetime(
+            data[["year", "month", "day", "hour"]],
+            format="%Y %m %d %H",
+        )
     )
     # drop unnecessary cols and set dt as index
     data = data.drop(columns=["No", "year", "month", "day", "hour"])
@@ -164,7 +169,6 @@ def munge_beijing_pm25(
             }
         )
     )
-    data = data.convert_dtypes()
     data = data.astype({"wind_dir": "category"})
     if fill == "forward":
         data = data.fillna(method="ffill", limit=None)
@@ -172,6 +176,9 @@ def munge_beijing_pm25(
         data = data.interpolate(method="time", limit=None)
     else:
         raise ValueError()
+    # convert dtypes here at the end since .interpolate(method="time") doesn't work
+    # for pandas' fancy new dtypes Int64 and Float64 (at least as of v1.1)
+    data = data.convert_dtypes()
     # drop any rows from start/end for which key value wasn't filled
     data = data.dropna(axis="index", how="any", subset=["pm2.5"])
     return data
