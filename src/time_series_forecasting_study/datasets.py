@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+from typing import Optional
 
 import pandas as pd
 
@@ -13,12 +14,14 @@ URL_BEIJING_PM25 = "https://archive.ics.uci.edu/ml/machine-learning-databases/00
 
 def _load_csv_dataset(
     *,
-    data_dir: str | pathlib.Path,
+    data_dir: Optional[str | pathlib.Path],
     fname: str,
     url: str,
     force: bool = False,
     **read_csv_from_url_kwargs,
 ) -> pd.DataFrame:
+    if data_dir is None:
+        data_dir = utils.get_default_data_dir()
     fpath = utils.to_path(data_dir).joinpath(fname)
     if not fpath.exists() or force is True:
         data = pd.read_csv(url, **read_csv_from_url_kwargs)
@@ -29,7 +32,7 @@ def _load_csv_dataset(
 
 
 def load_mlo_co2(
-    data_dir: str | pathlib.Path,
+    data_dir: Optional[str | pathlib.Path] = None,
     force: bool = False,
 ) -> pd.DataFrame:
     """
@@ -96,7 +99,7 @@ def munge_mlo_co2(
 
 
 def load_beijing_pm25(
-    data_dir: str | pathlib.Path,
+    data_dir: Optional[str | pathlib.Path] = None,
     force: bool = False,
 ) -> pd.DataFrame:
     """
@@ -132,10 +135,7 @@ def munge_beijing_pm25(
     """
     # build a combined datetime column
     data = data.assign(
-        dt=pd.to_datetime(
-            data[["year", "month", "day", "hour"]],
-            format="%Y %m %d %H",
-        )
+        dt=pd.to_datetime(data[["year", "month", "day", "hour"]], format="%Y %m %d %H")
     )
     # drop unnecessary cols and set dt as index
     data = data.drop(columns=["No", "year", "month", "day", "hour"])

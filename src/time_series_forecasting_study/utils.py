@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.resources
 import pathlib
 import urllib.parse
 from typing import Optional
@@ -24,3 +25,12 @@ def get_fname_from_url(url: str) -> Optional[str]:
         filename at the end of the URL path.
     """
     return pathlib.Path(urllib.parse.urlparse(url).path).name
+
+
+def get_default_data_dir() -> pathlib.Path:
+    # dirpath = pathlib.Path(__file__).parent.parent.parent.resolve().joinpath("data")
+    pkgname = "time_series_forecasting_study"
+    with importlib.resources.path(pkgname, "__init__.py") as fpath:
+        dirpath = fpath.parent.parent.parent.joinpath("data")
+    dirpath.mkdir(exist_ok=True)
+    return dirpath
