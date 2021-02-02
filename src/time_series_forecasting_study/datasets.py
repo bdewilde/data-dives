@@ -64,9 +64,17 @@ def munge_mlo_co2(
     """
     Args:
         data: As loaded from :func:`load_mlo_co2()`.
+        freq: Time series frequency as a ``pandas``-style "offset alias" string,
+            to which data will be resampled using mean() to aggregate values.
+        fill: Name of method with which to fill missing values.
+            "forward" => :meth:`pd.DataFrame.fillna(method="ffill")`
+            "interpolate" => :meth:`pd.DataFrame.interpolate(method="time")`
 
     Returns:
         Munged Mauna Loa Observatory in-situ CO2 dataset.
+
+    See Also:
+        https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     """
     # some of the columns have extra chars, so strip em
     data = data.rename(columns=lambda x: x.strip("% "))
@@ -123,15 +131,24 @@ def load_beijing_pm25(
 
 def munge_beijing_pm25(
     data: pd.DataFrame,
+    *,
     freq: str = "1D",
-    fill: str = "ffill",
+    fill: str = "interpolate",  # Literal["forward", "interpolate"]
 ) -> pd.DataFrame:
     """
     Args:
         data: As loaded from :func:`load_beijing_pm25()`.
+        freq: Time series frequency as a ``pandas``-style "offset alias" string,
+            to which data will be resampled using mean() to aggregate values.
+        fill: Name of method with which to fill missing values.
+            "forward" => :meth:`pd.DataFrame.fillna(method="ffill")`
+            "interpolate" => :meth:`pd.DataFrame.interpolate(method="time")`
 
     Returns:
         Munged Beijing PM2.5 dataset.
+
+    See Also:
+        https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     """
     # build a combined datetime column
     data = data.assign(
