@@ -1,7 +1,0 @@
-altair>=4.0.0
-ipython>=7.0.0
-jedi==0.17.2
-matplotlib>=3.0.0
-missingno>=0.4.0
-pandas>=1.1.0
-statsmodels>=0.12.0
