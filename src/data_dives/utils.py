@@ -5,6 +5,8 @@ import pathlib
 import urllib.parse
 from typing import Optional
 
+_PKG_NAME = "data_dives"
+
 
 def to_path(str_or_path: str | pathlib.Path) -> pathlib.Path:
     """If possible / as needed, convert ``str_or_path`` into a :class:`pathlib.Path`."""
@@ -28,9 +30,13 @@ def get_fname_from_url(url: str) -> Optional[str]:
 
 
 def get_default_data_dir() -> pathlib.Path:
-    # dirpath = pathlib.Path(__file__).parent.parent.parent.resolve().joinpath("data")
-    pkgname = "time_series_forecasting_study"
-    with importlib.resources.path(pkgname, "__init__.py") as fpath:
+    """
+    Get full path to package's default data directory on disk.
+
+    Note:
+        Automatically makes directory if it doesn't already exist.
+    """
+    with importlib.resources.path(_PKG_NAME, "__init__.py") as fpath:
         dirpath = fpath.parent.parent.parent.joinpath("data")
     dirpath.mkdir(exist_ok=True)
     return dirpath
