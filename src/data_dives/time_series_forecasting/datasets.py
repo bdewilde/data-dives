@@ -5,7 +5,7 @@ from typing import Optional
 
 import pandas as pd
 
-from . import utils
+from data_dives import utils
 
 
 URL_MLO_CO2 = "https://scrippsco2.ucsd.edu/assets/data/atmospheric/stations/in_situ_co2/daily/daily_in_situ_co2_mlo.csv"  # noqa
