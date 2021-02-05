@@ -8,7 +8,7 @@ import pandas as pd
 import statsmodels.api as sm
 
 
-def time_plot_multi(
+def plot_time_series(
     mseries: Sequence[pd.Series],
     labels: Optional[Sequence[str]] = None,
     subplots: bool = True,
@@ -53,6 +53,7 @@ def plot_autocorrelations(
     lags: Optional[int] = None,
     alpha: float = 0.05,
     use_vlines: bool = True,
+    zero: bool = False,
     acf_kwargs: Optional[Dict[str, Any]] = None,
     pacf_kwargs: Optional[Dict[str, Any]] = None,
     **fig_kwargs,
@@ -86,12 +87,12 @@ def plot_autocorrelations(
     _, axes = plt.subplots(nrows=2, sharex=True, **fig_kwargs)
     _ = sm.graphics.tsa.plot_acf(
         series,
-        lags=lags, alpha=alpha, use_vlines=use_vlines, ax=axes[0],
+        lags=lags, alpha=alpha, use_vlines=use_vlines, zero=zero, ax=axes[0],
         **acf_kwargs
     )
     _ = sm.graphics.tsa.plot_pacf(
         series,
-        lags=lags, alpha=alpha, use_vlines=use_vlines, ax=axes[1],
+        lags=lags, alpha=alpha, use_vlines=use_vlines, zero=zero, ax=axes[1],
         **pacf_kwargs
     )
     axes[0].set_ylabel("acf")
