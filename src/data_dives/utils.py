@@ -8,6 +8,21 @@ from typing import Optional
 _PKG_NAME = "data_dives"
 
 
+def get_fpath(
+    data_dir: Optional[str | pathlib.Path],
+    fname: Optional[str],
+    url: Optional[str],
+) -> pathlib.Path:
+    data_dir = get_default_data_dir() if data_dir is None else to_path(data_dir)
+    if fname:
+        return data_dir.resolve().joinpath(fname)
+    elif url:
+        fname = get_fname_from_url(url)
+        return data_dir.resolve().joinpath(fname)
+    else:
+        raise ValueError("either `fname` or `url` must be specified")
+
+
 def to_path(str_or_path: str | pathlib.Path) -> pathlib.Path:
     """If possible / as needed, convert ``str_or_path`` into a :class:`pathlib.Path`."""
     if isinstance(str_or_path, str):
