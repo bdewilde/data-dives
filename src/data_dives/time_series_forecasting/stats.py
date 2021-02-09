@@ -2,8 +2,38 @@ from __future__ import annotations
 
 from typing import Optional
 
+import numpy as np
 import pandas as pd
+import sklearn.base
+import sklearn.metrics
 import statsmodels.api as sm
+
+
+def adjusted_r2_score(
+    model: sklearn.base.BaseEstimator, y: np.array, yhat: np.array
+) -> float:
+    """
+    Compute the adjusted R^2 metric (aka coefficient of determination), which measures
+    the "goodness of fit" of a linear model as the proportion of variation in the
+    dependent variable accounted for by the independent variable(s).
+
+    It's less biased than (unadjusted R^2), and better for use in evaluating models.
+
+    Args:
+        model: Fit model
+        y: True dependent variable values
+        yhat: Estimated dependent variable values
+
+    Returns:
+        Adjusted R^2 score.
+
+    See Also:
+        https://scikit-learn.org/stable/modules/generated/sklearn.metrics.r2_score.html
+    """
+    r2 = sklearn.metrics.r2_score(y, yhat)
+    n = len(y)
+    p = len(model.coef_)
+    return 1 - ((1 - r2) * (n - 1) / (n - p - 1))
 
 
 def adfuller_test(
