@@ -4,7 +4,9 @@ import itertools
 from typing import Any, Dict, List, Optional, Sequence, Sequence
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import scipy.stats as st
 import statsmodels.api as sm
 
 
@@ -99,3 +101,47 @@ def plot_autocorrelations(
     axes[1].set_ylabel("pacf")
     axes[1].set_xlabel("lag")
     return list(axes)
+
+
+def plot_residuals_diagnostics(
+    residuals: pd.Series,
+    acf_kw=None,
+    hist_kw=None,
+    **fig_kwargs
+) -> List[plt.Subplot]:
+    """
+    Make three diagnostic plots of residuals to evaluate a model's fit: residuals as
+    a time series, an autocorrelation correlogram, and a histogram as compared to a
+    normal distribution.
+
+    Args:
+        residuals
+        acf_kw
+        hist_kw
+        **fig_kwargs
+
+    Returns:
+        Subplots on which residuals diagnostics have been plotted.
+    """
+    fig = plt.figure(**fig_kwargs)
+    gs = fig.add_gridspec(nrows=2, ncols=2)
+    ax1 = fig.add_subplot(gs[0, :])
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax3 = fig.add_subplot(gs[1, 1])
+    # time plot up top
+    _ = residuals.plot.line(ylabel="residuals", ax=ax1)
+    # autocorrelation correlogram bottom left
+    acf_kw = acf_kw or {}
+    acf_title = acf_kw.pop("title", None)
+    _ = sm.graphics.tsa.plot_acf(residuals, ax=ax2, title=acf_title, **acf_kw)
+    if not acf_title:
+        ax2.set_ylabel("acf")
+    # histogram density + normal distribution bottom right
+    hist_kw = hist_kw or {}
+    _ = ax3.hist(residuals, density=True, label="residuals", **hist_kw)
+    mu = 0
+    sigma = residuals.std()
+    x = np.linspace(mu - 3 * sigma, mu + 3 * sigma, 100)
+    ax3.plot(x, st.norm.pdf(x, mu, sigma), label="N(0, $\sigma$)")
+    ax3.legend()
+    return [ax1, ax2, ax3]
