@@ -10,7 +10,7 @@ import statsmodels.api as sm
 
 
 def adjusted_r2_score(
-    model: sklearn.base.BaseEstimator, y: np.array, yhat: np.array
+    y: np.array, yhat: np.array, model: sklearn.base.BaseEstimator
 ) -> float:
     """
     Compute the adjusted R^2 metric (aka coefficient of determination), which measures
@@ -20,9 +20,9 @@ def adjusted_r2_score(
     It's less biased than (unadjusted R^2), and better for use in evaluating models.
 
     Args:
-        model: Fit model
         y: True dependent variable values
         yhat: Estimated dependent variable values
+        model: Fit model
 
     Returns:
         Adjusted R^2 score.
