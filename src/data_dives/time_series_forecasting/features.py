@@ -1,4 +1,4 @@
-import statsmodels.tsa
+import statsmodels.tsa.seasonal
 
 
 def trend_strength(decomp: statsmodels.tsa.seasonal.DecomposeResult) -> float:
