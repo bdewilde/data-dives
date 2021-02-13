@@ -51,19 +51,19 @@ def plot_time_series(
 
 
 def plot_seasonal_periods(
-    data_grped: pd.core.groupby.DataFrameGroupBy,
+    data_grped: pd.core.groupby.SeriesGroupBy,
     dt_attr: str,  # Literal["hour", day", "month", "quarter", "year"],
     *,
-    cmap: Optional[str] = None,
+    cmap: str = "viridis",
     plot_kw: Optional[Dict[str, Any]] = None,
     **fig_kw,
 ) -> plt.Subplot:
     """
-    Make a plot of each seasonal group in ``data_grped`` laid one on top of the other,
+    Make a plot of each seasonal period in ``data_grped`` laid one on top of the other,
     with optional colormap (+colorbar).
 
     Args:
-        data_grped
+        data_grped: Grouped time series, as produced by :meth:`pd.Series.groupby()`.
         dt_attr: Datetime component accessible as group index attribute.
         cmap: Name of cmap to use in coloring each seasonal periods' line.
         plot_kw: Keyword arguments passed on to :func:`matplotlib.axes.Axes.plot()`.
@@ -74,22 +74,24 @@ def plot_seasonal_periods(
     """
     fig, ax = plt.subplots(**fig_kw)
     plot_kw = {} if plot_kw is None else plot_kw
-    if cmap is not None:
-        cmap = plt.cm.get_cmap(name=cmap)
-        group_names = data_grped.groups.keys()
-        cmap_norm = mpl.colors.Normalize(vmin=min(group_names), vmax=max(group_names))
-        _ = fig.colorbar(plt.cm.ScalarMappable(norm=cmap_norm, cmap=cmap), ax=ax)
+    cmap = plt.cm.get_cmap(name=cmap)
+    group_names = data_grped.groups.keys()
+    cmap_norm = mpl.colors.Normalize(vmin=min(group_names), vmax=max(group_names))
+    _ = fig.colorbar(plt.cm.ScalarMappable(norm=cmap_norm, cmap=cmap), ax=ax)
     ngroups = data_grped.ngroups
     minx = None
     maxx = None
     for i, (name, grp) in enumerate(data_grped):
         xvals = getattr(grp.index, dt_attr)
-        yvals = grp.values
+        yvals = grp.values.astype(float)
         color = cmap(i / ngroups) if cmap else None
         _ = ax.plot(xvals, yvals, color=color, label=name, **plot_kw)
         minx = min(minx, min(xvals)) if minx is not None else min(xvals)
         maxx = max(maxx, max(xvals)) if maxx is not None else max(xvals)
+        ylabel = grp.name
     _ = ax.set_xlim(left=minx, right=maxx)
+    _ = ax.set_xlabel(dt_attr)
+    _ = ax.set_ylabel(ylabel or "")
     return ax
 
 
