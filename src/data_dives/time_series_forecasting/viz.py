@@ -86,7 +86,7 @@ def plot_seasonal_periods(
         xvals = getattr(grp.index, dt_attr)
         yvals = grp.values
         color = cmap(i / ngroups) if cmap else None
-        _ = ax.plot(xvals, yvals, color=color, label=name, **plot_kw))
+        _ = ax.plot(xvals, yvals, color=color, label=name, **plot_kw)
         minx = min(minx, min(xvals)) if minx is not None else min(xvals)
         maxx = max(maxx, max(xvals)) if maxx is not None else max(xvals)
     _ = ax.set_xlim(left=minx, right=maxx)
