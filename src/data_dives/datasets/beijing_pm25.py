@@ -118,7 +118,7 @@ class BeijingPM25(base.Dataset):
                     "hrs_rain": "mean",  # "max"
                 }
             )
-            .astype({"wind_dir": "category"})
+            .astype({"wind_dir": "string"})
         )
         # fill missing values using specified method
         if fill == "forward":
