@@ -9,6 +9,36 @@ import sklearn.metrics
 import statsmodels.api as sm
 
 
+def trend_strength(trend: pd.Series, residual: pd.Series) -> float:
+    """
+    Compute the strength of a decomposed time series' trend component by comparing
+    it to the residual component.
+
+    Args:
+        trend
+        residual
+
+    Returns:
+        Trend strength, where 0.0 is weakest and 1.0 is strongest.
+    """
+    return max(1 - residual.var() / (residual.var() + trend.var()), 0.0)
+
+
+def seasonal_strength(seasonal: pd.Seris, residual: pd.Series) -> float:
+    """
+    Compute the strength of a decomposed time series' seasonal component by comparing
+    it to the residual component.
+
+    Args:
+        seasonal
+        resid
+
+    Returns:
+        Seasonal strength, where 0.0 is weakest and 1.0 is strongest.
+    """
+    return max(1 - residual.var() / (residual.var() + seasonal.var()), 0.0)
+
+
 def adjusted_r2_score(
     y: np.array, yhat: np.array, model: sklearn.base.BaseEstimator
 ) -> float:
