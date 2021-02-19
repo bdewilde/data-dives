@@ -1,42 +1,61 @@
+from __future__ import annotations
+
 import math
+from typing import List
 
 import numpy as np
 import pandas as pd
 
 
-def get_bootstrapped_samples(
-    series: pd.Series,
+def bootstrap(
+    *arrays,
     block_size: int,
     strategy: str = "mb",  # Literal["mb", "cb"]
-    n_samples: int = 1,
-) -> pd.DataFrame:
+) -> pd.Series | pd.DataFrame | List[pd.Series | pd.DataFrame]:
     """
-    Get one or multiple bootstrapped samples as concatenated blocks of contiguous values
-    of ``series`` randomly partitioned using a block bootstrapping strategy.
+    Get bootstrapped samples of each array in ``arrays`` as concatenated blocks of
+    contiguous values, randomly partitioned via a block bootstrapping strategy.
 
     Args:
-        series
-        block_size
-        strategy
-        n_samples
+        *arrays: Sequence of series or dataframes with the same number of rows.
+        block_size: Size of each block to concatenate.
+        strategy: Name of blocked boostrapping strategy; either "mb" for "moving block"
+            or "cb" for "circular block".
 
     Returns:
-        DataFrame of bootstrapped samples of shape (len(series), n_samples).
+        Bootstrapped arrays in input order, each of the same shape and type
+        as the original data; if only a single array is passed in, the output is also
+        a single bootstrapped array rather than a list of them.
     """
     strategy_funcs = {"mb": get_mb_indexes, "cb": get_cb_indexes}  # clunky, ugh
     strategy_func = strategy_funcs[strategy]
-    n_obs = len(series)
-    values = series.to_numpy()
-    bootstrap_data = np.empty((n_obs, n_samples))
-    for i in range(n_samples):
-        sample_idxs = strategy_func(n_obs, block_size)
-        sample_values = values[sample_idxs]
-        bootstrap_data[:, i] = sample_values
-    return pd.DataFrame(
-        data=bootstrap_data,
-        index=series.index,
-        columns=[f"sample{i}" for i in range(n_samples)],
-    )
+    if len({len(array) for array in arrays}) > 1:
+        raise ValueError("all arrays to be resampled must have the same length")
+    n_obs = len(arrays[0])
+    sample_idxs = strategy_func(n_obs, block_size)
+    bootstrapped_arrays = []
+    for array in arrays:
+        if isinstance(array, pd.Series):
+            bootstrapped_arrays.append(
+                pd.Series(
+                    data=array.iloc[sample_idxs].to_numpy(),
+                    index=array.index,
+                    name=array.name,
+                )
+            )
+        elif isinstance(array, pd.DataFrame):
+            bootstrapped_arrays.append(
+                pd.DataFrame(
+                    data=array.iloc[sample_idxs].to_numpy(),
+                    index=array.index,
+                    columns=array.columns,
+                )
+            )
+        else:
+            raise TypeError()
+    if len(bootstrapped_arrays) == 1:
+        bootstrapped_arrays = bootstrapped_arrays[0]
+    return bootstrapped_arrays
 
 
 def get_mb_indexes(n_obs: int, block_size: int) -> np.ndarray:
