@@ -96,29 +96,28 @@ class BeijingPM25(base.Dataset):
                     "TEMP": "temp",
                     "PRES": "pressure",
                     "cbwd": "wind_dir",
-                    "Iws": "wind_speed",
+                    "Iws": "cum_wind_speed",
                     "Is": "hrs_snow",
                     "Ir": "hrs_rain",
                 }
             )
         )
-        # resample and aggregate values, with special handling for categorical wind_dir
-        data = (
-            data
-            .resample(freq, axis="index")
-            .agg(
+        # resample and aggregate values, with special handling for wind variables
+        data_resamp = data.resample(freq, axis="index")
+        data = pd.merge(
+            data_resamp.agg(
                 {
                     "pm2.5": "mean",
                     "dew_point": "mean",
                     "temp": "mean",
                     "pressure": "mean",
-                    "wind_dir": lambda x: x.mode(),
-                    "wind_speed": "mean",
                     "hrs_snow": "mean",  # "max"
                     "hrs_rain": "mean",  # "max"
                 }
-            )
-            .astype({"wind_dir": "string"})
+            ),
+            data_resamp.apply(_agg_wind_cols).astype({"wind_dir": "string"}),
+            left_index=True,
+            right_index=True,
         )
         # fill missing values using specified method
         if fill == "forward":
@@ -127,9 +126,15 @@ class BeijingPM25(base.Dataset):
             data = data.interpolate(method="time", limit=None)
         else:
             raise ValueError()
-        # convert dtypes here at the end since .interpolate(method="time") doesn't work
-        # for pandas' fancy new dtypes Int64 and Float64 (at least as of v1.1)
-        data = data.convert_dtypes()
         # drop any rows from start/end for which key value wasn't filled
         data = data.dropna(axis="index", how="any", subset=["pm2.5"])
         return data
+
+
+def _agg_wind_cols(df):
+    mode_wind_dir = df["wind_dir"].mode().iat[0]
+    max_cum_wind_speed = df.loc[df["wind_dir"] == mode_wind_dir, "cum_wind_speed"].max()
+    return pd.Series(
+        [mode_wind_dir, max_cum_wind_speed],
+        index=["wind_dir", "cum_wind_speed"],
+    )
